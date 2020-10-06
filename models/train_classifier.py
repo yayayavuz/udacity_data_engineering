@@ -14,6 +14,16 @@ from sklearn.ensemble import RandomForestClassifier
 import pickle
 
 def load_data(database_filepath):
+    '''
+    Load data from SQLite database as df
+    Input:
+        database_filepath: Path of Sqlite database
+    Output:
+        X: Features of the model (Messages)
+        Y: Targets of the model (Categories)
+        category_names: Labels of the categories
+    '''
+
     engine = create_engine('sqlite:///{}'.format(database_filepath))
     df = pd.read_sql_table('InsertTableName', engine)
     X = df['message']
@@ -22,6 +32,14 @@ def load_data(database_filepath):
     return X, Y, category_names
 
 def tokenize(text):
+    '''
+    Tokenize and lemmatize text
+    Input:
+        text: original message text
+    Output:
+        tokens: Tokenized  and lemmatized text
+    '''
+
     text = re.sub(r"[^a-zA-Z0-9]", " ", text.lower())
     tokens = nltk.word_tokenize(text)
     tokens = [WordNetLemmatizer().lemmatize(word) for word in tokens if word not in stopwords.words("english")]
@@ -30,20 +48,37 @@ def tokenize(text):
 
 
 def build_model():
-        pipeline = Pipeline([
+    '''
+    ML pipeline using TfidfTransformer, RandomForestClassifier, and GridSearchCV
+    Input: None
+    Output:
+        Results of GridSearchCV
+    '''
+
+    pipeline = Pipeline([
                     ('vect', CountVectorizer(tokenizer=tokenize)),
                     ('tfidf', TfidfTransformer()),
                     ('classifier', MultiOutputClassifier(RandomForestClassifier()))
                     ])
-        parameters = {
+    parameters = {
             'classifier__estimator__n_estimators': [20, 30]
         }
 
-        cv = GridSearchCV(pipeline, param_grid=parameters)
-        return cv
+    cv = GridSearchCV(pipeline, param_grid=parameters)
+    return cv
 
 
 def evaluate_model(model, X_test, Y_test, category_names):
+    '''
+    Evaluate model performance
+    Input:
+        model: Model built
+        X_test: Features of the test data
+        Y_test: Categories for test data
+        category_names: Labels for categories
+    Output:
+         classfication report for each category
+    '''
     y_pred = model.predict(X_test)
     df_y_pred = pd.DataFrame(data=y_pred, columns=category_names)
     for col in category_names:
@@ -51,6 +86,14 @@ def evaluate_model(model, X_test, Y_test, category_names):
 
 
 def save_model(model, model_filepath):
+    '''
+    Save model as a pickle file
+    Input:
+        model: Model built
+        model_filepath: Path of the model pickle file
+       Output:
+        A pickle file(model)
+    '''
     pickle.dump(model, open(model_filepath, 'wb'))
 
 
